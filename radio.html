@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><title>Relais lecteur YouTube – Kelio CRM</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;inset:0;width:100%;height:100%;border:0}</style></head>
+<body><div id="p"></div>
+<script>
+/* Page relais du lecteur musique du Kelio CRM : aucune donnée, uniquement le lecteur YouTube.
+   Hébergée en https (ex. GitHub Pages), elle donne à YouTube l'adresse web qu'il exige ; le CRM (même ouvert en fichier local)
+   l'insère dans un cadre et la pilote par messages (load / play / pause / stop / vol). Seuls des identifiants de vidéo circulent. */
+(function(){
+ var q=new URLSearchParams(location.search),ID=/^[\w-]{11}$/,v=q.get('v'),vol=parseFloat(q.get('vol')),pl=null,ready=false,P=window.parent;
+ function send(t,x){try{P.postMessage({kelio:'radio-evt',t:t,v:x},'*')}catch(e){}}
+ window.onYouTubeIframeAPIReady=function(){
+  pl=new YT.Player('p',{width:'100%',height:'100%',videoId:ID.test(v||'')?v:'',
+   playerVars:{controls:0,modestbranding:1,playsinline:1,rel:0,iv_load_policy:3,autoplay:1,origin:location.origin},
+   events:{onReady:function(){ready=true;if(vol>=0&&vol<=1)pl.setVolume(Math.round(vol*100));pl.playVideo();send('ready')},
+           onStateChange:function(e){send('state',e.data)},onError:function(e){send('error',e.data)}}})};
+ var s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.onerror=function(){send('error',-1)};document.head.appendChild(s);
+ addEventListener('message',function(e){
+  var m=e.data;if(e.source!==P||!m||m.kelio!=='radio'||!ready)return;
+  try{
+   if(m.cmd==='load'&&ID.test(m.id||''))pl.loadVideoById(m.id);
+   else if(m.cmd==='play')pl.playVideo();
+   else if(m.cmd==='pause')pl.pauseVideo();
+   else if(m.cmd==='stop')pl.stopVideo();
+   else if(m.cmd==='vol'&&m.v>=0&&m.v<=1)pl.setVolume(Math.round(m.v*100));
+  }catch(x){}
+ });
+})();
+</script></body></html>
